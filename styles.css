@@ -1910,6 +1910,12 @@ input[type="range"] {
   background: #fff8e7;
 }
 
+.model-tag.data {
+  border-color: #9fd8ba;
+  color: #0a7a4a;
+  background: #f1faf5;
+}
+
 .band-options {
   padding: 4px;
   display: grid;

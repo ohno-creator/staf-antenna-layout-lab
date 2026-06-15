@@ -103,6 +103,7 @@ const el = {
   resonanceFrequency: document.querySelector("#resonanceFrequency"),
   reflectedPower: document.querySelector("#reflectedPower"),
   baselineDelta: document.querySelector("#baselineDelta"),
+  baselineDeltaLabel: document.querySelector(".baseline-delta span"),
   bandRangeKicker: document.querySelector("#bandRangeKicker"),
   bandRangeText: document.querySelector("#bandRangeText"),
   bandCoverage: document.querySelector("#bandCoverage"),
@@ -312,6 +313,126 @@ function referenceModel() {
 }
 
 // ------------------------------------------------------------------
+// 実データ駆動モデル（dataDriven機種：1018-456A）
+// お試しシミュレーター由来の VSWR / 放射効率 を 基板幅×基板長×周波数 で
+// 連続補間（シームレス化）。実データに無い実装条件（GND構成・基材・板厚・
+// 外形）は軽い補正として加える。
+// ------------------------------------------------------------------
+function gridSeg(vals, x) {
+  if (x <= vals[0]) return [0, 0, 0];
+  if (x >= vals[vals.length - 1]) return [vals.length - 1, vals.length - 1, 0];
+  for (let i = 0; i < vals.length - 1; i += 1) {
+    if (x <= vals[i + 1]) return [i, i + 1, (x - vals[i]) / (vals[i + 1] - vals[i])];
+  }
+  return [vals.length - 1, vals.length - 1, 0];
+}
+
+// 幅×長さ×周波数の三線形補間
+function interpGrid456(table, freqAxis, input, f) {
+  const D = ANTENNA_456A_DATA;
+  const W = D.widths, L = D.lengths;
+  const w = clamp(input.width, W[0], W[W.length - 1]);
+  const ln = clamp(input.height, L[0], L[L.length - 1]);
+  const [wi0, wi1, wt] = gridSeg(W, w);
+  const [li0, li1, lt] = gridSeg(L, ln);
+  const [fi0, fi1, ft] = gridSeg(freqAxis, f);
+  const at = (wi, li) => {
+    const arr = table[String(W[wi])][String(L[li])];
+    return arr[fi0] + (arr[fi1] - arr[fi0]) * ft;
+  };
+  const top = at(wi0, li0) + (at(wi1, li0) - at(wi0, li0)) * wt;
+  const bot = at(wi0, li1) + (at(wi1, li1) - at(wi0, li1)) * wt;
+  return top + (bot - top) * lt;
+}
+
+function model456(input) {
+  const D = ANTENNA_456A_DATA;
+  const band = activeBand();
+  const placement = placementInfo(input);
+  const lambdaQuarter = lambdaQuarterMm(band.f0Base);
+  const counterpoiseRatio = clamp(Math.max(input.width, input.height) / lambdaQuarter, 0, 1.6);
+  const material = MATERIALS[input.material];
+
+  // 実データに無い実装条件の軽い補正（VSWRはデータ形状を保ったまま劣化させる）
+  const condFactor = 1
+    + (input.gndMode === "full" ? 0 : input.gndMode === "partial" ? 0.06 : 0.14)
+    + (input.gndLayer === "both" ? 0 : input.gndLayer === "bottom" ? 0.03 : 0.05)
+    + (input.shape === "rectangle" ? 0 : input.shape === "chamfer" ? 0.03 : 0.07)
+    + Math.abs(input.thickness - REF_THICKNESS) * 0.03;
+  const fShiftRatio = material.shiftRatio + (input.gndGap - REF_GAP) * 0.0015;
+
+  function valueAt(frequencyMHz) {
+    const f = frequencyMHz * (1 - fShiftRatio);
+    const raw = interpGrid456(D.vswr, D.freqMHz, input, f);
+    return clamp(1 + (raw - 1) * condFactor, 1, 12);
+  }
+  function efficiencyAt(frequencyMHz) {
+    const f = frequencyMHz * (1 - fShiftRatio);
+    return interpGrid456(D.eff, D.effFreqMHz, input, f);
+  }
+
+  // 帯域をサンプリングして最小VSWR・共振点・カバー率・通過帯域を求める
+  const steps = 160;
+  let minimum = 99, f0 = band.f0Base, inBand = 0, passStart = null, passEnd = null;
+  for (let i = 0; i <= steps; i += 1) {
+    const f = band.startMHz + (band.endMHz - band.startMHz) * i / steps;
+    const v = valueAt(f);
+    if (v < minimum) { minimum = v; f0 = f; }
+    if (v <= 2) {
+      inBand += 1;
+      if (passStart === null) passStart = f;
+      passEnd = f;
+    }
+  }
+  const coverage = inBand / (steps + 1) * 100;
+  if (passStart === null) { passStart = f0; passEnd = f0; }
+
+  return {
+    area: effectiveBoardArea(input),
+    areaRatio: 1,
+    placement,
+    lambdaQuarter,
+    counterpoiseRatio,
+    minimum,
+    f0,
+    halfWidth: band.halfWidthBase,
+    valueAt,
+    efficiencyAt,
+    centerEff: efficiencyAt(f0),
+    passStart,
+    passEnd,
+    coverage,
+    penalties: {}
+  };
+}
+
+function referenceModel456() {
+  const D = ANTENNA_456A_DATA;
+  const band = activeBand();
+  const refInput = {
+    width: clamp(band.refBoard.width, D.widths[0], D.widths[D.widths.length - 1]),
+    height: clamp(band.refBoard.height, D.lengths[0], D.lengths[D.lengths.length - 1])
+  };
+  return {
+    valueAt(frequencyMHz) {
+      return clamp(interpGrid456(D.vswr, D.freqMHz, refInput, frequencyMHz), 1, 12);
+    }
+  };
+}
+
+function isDataDriven() {
+  return !!activeAntenna().dataDriven && typeof ANTENNA_456A_DATA !== "undefined";
+}
+
+function buildModel(input) {
+  return isDataDriven() ? model456(input) : model(input);
+}
+
+function buildReference() {
+  return isDataDriven() ? referenceModel456() : referenceModel();
+}
+
+// ------------------------------------------------------------------
 // 機種・帯域セレクタ
 // ------------------------------------------------------------------
 
@@ -359,7 +480,7 @@ function renderModelCards() {
       <span class="model-card-bands">${antenna.bandSummary}</span>
       <span class="model-card-tags">
         <i class="model-tag">${antenna.mount}</i>
-        ${antenna.calibrated ? "" : '<i class="model-tag preliminary">概算 仮係数</i>'}
+        ${antenna.dataDriven ? '<i class="model-tag data">実測/解析データ</i>' : antenna.calibrated ? "" : '<i class="model-tag preliminary">概算 仮係数</i>'}
       </span>`;
     card.addEventListener("click", () => selectAntenna(index));
     el.modelCards.append(card);
@@ -840,9 +961,9 @@ function updateVswr() {
     return;
   }
 
-  const result = model(input);
+  const result = buildModel(input);
   const path = buildPath(result.valueAt);
-  const baseline = buildPath(referenceModel().valueAt);
+  const baseline = buildPath(buildReference().valueAt);
 
   el.vswrPath.setAttribute("d", path.line);
   el.vswrArea.setAttribute("d", path.area);
@@ -880,9 +1001,17 @@ function updateVswr() {
   el.minVswr.textContent = result.minimum.toFixed(2);
   el.resonanceFrequency.textContent = freqDisp(result.f0);
   el.reflectedPower.textContent = `${reflectedPowerPercent(result.minimum).toFixed(1)}%`;
-  const delta = result.minimum - band.minBase;
-  el.baselineDelta.textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`;
-  el.baselineDelta.className = delta <= .15 ? "delta-good" : delta <= .5 ? "delta-caution" : "delta-risk";
+  // データ駆動機種は「基準条件との差」セルを放射効率の表示に切り替える
+  if (typeof result.centerEff === "number") {
+    if (el.baselineDeltaLabel) el.baselineDeltaLabel.textContent = "帯域中心の放射効率";
+    el.baselineDelta.textContent = `${result.centerEff.toFixed(1)} dB`;
+    el.baselineDelta.className = result.centerEff >= -3 ? "delta-good" : result.centerEff >= -6 ? "delta-caution" : "delta-risk";
+  } else {
+    if (el.baselineDeltaLabel) el.baselineDeltaLabel.textContent = "基準条件との差";
+    const delta = result.minimum - band.minBase;
+    el.baselineDelta.textContent = `${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`;
+    el.baselineDelta.className = delta <= .15 ? "delta-good" : delta <= .5 ? "delta-caution" : "delta-risk";
+  }
 
   values.forEach((item, index) => updateFrequencyCard(el.cards[index], item.value));
 
@@ -961,7 +1090,16 @@ function updateDiagnosis(result, input, values) {
   }
 
   if (input.shape === "lshape") reasons.push("L字外形のためGND電流経路の個別確認が必要です");
-  el.diagnosisText.textContent = `${reasons.slice(0, 4).join("。")}。`;
+
+  // データ駆動機種は実測/解析ベースである旨と放射効率を明示
+  if (typeof result.centerEff === "number") {
+    reasons.unshift(`お試しシミュレーター実データ（基板幅×長さ）に基づく表示です`);
+    const eff = result.centerEff;
+    const effNote = eff >= -3 ? "良好" : eff >= -6 ? "やや低い" : "低い（基板を大きくすると改善）";
+    reasons.push(`帯域中心の放射効率は約${eff.toFixed(1)}dB（${effNote}）`);
+  }
+  const reasonLimit = typeof result.centerEff === "number" ? 5 : 4;
+  el.diagnosisText.textContent = `${reasons.slice(0, reasonLimit).join("。")}。`;
 
   updateTicker(result, band);
 }

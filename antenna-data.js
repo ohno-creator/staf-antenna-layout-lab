@@ -139,7 +139,8 @@ const ANTENNA_CATALOG = [
     bandSummary: "814–960 MHz / 1.575–2.17 GHz",
     guide: { pick: "GNSS / 挿入実装で使う", freq: "0.8–0.9G / 1.575–2.17G", mount: "挿入実装（スルーホール）", sizeClass: "長尺・低背" },
     dims: { length: 45, width: 8, height: 5 },
-    calibrated: false,
+    calibrated: true,
+    dataDriven: true,
     bands: [
       {
         id: "cell800",
