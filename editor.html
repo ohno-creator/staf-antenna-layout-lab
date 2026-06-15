@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>【社内用】機種データ編集 | STAF Antenna Layout Lab</title>
+  <link rel="stylesheet" href="styles.css?v=260612-4">
+  <style>
+    /* ===== 社内編集ページ専用スタイル（公開ページでは未使用） ===== */
+    .editor-banner {
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #7a1d12;
+      background: repeating-linear-gradient(135deg, #ffe3c2 0 14px, #ffd2a3 14px 28px);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-align: center;
+    }
+
+    .editor-main {
+      padding: 28px max(18px, calc((100vw - 1480px) / 2)) 70px;
+      display: grid;
+      grid-template-columns: 250px minmax(420px, 1.2fr) minmax(380px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .editor-panel {
+      padding: 20px;
+      border: 1px solid rgba(16, 24, 40, .08);
+      border-radius: 16px;
+      background: white;
+      box-shadow: var(--shadow);
+    }
+
+    .editor-panel h2 {
+      margin: 0 0 4px;
+      color: var(--navy);
+      font-size: 17px;
+    }
+
+    .editor-panel .panel-sub {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .editor-model-list {
+      margin: 0 0 12px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .editor-model-list button {
+      width: 100%;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      text-align: left;
+    }
+
+    .editor-model-list button.active {
+      border-color: var(--blue-bright);
+      background: #f3f9ff;
+    }
+
+    .editor-model-list b {
+      color: var(--navy);
+      font-size: 12px;
+    }
+
+    .editor-model-list small {
+      color: var(--muted);
+      font-size: 8px;
+    }
+
+    .editor-button {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #344054;
+      background: var(--soft);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .editor-button.primary {
+      border-color: var(--blue);
+      color: white;
+      background: var(--blue);
+    }
+
+    .editor-button.danger {
+      border-color: #f2a7a2;
+      color: #b42318;
+      background: #fff2f1;
+    }
+
+    .editor-button.ghost {
+      background: white;
+    }
+
+    .editor-button + .editor-button {
+      margin-top: 7px;
+    }
+
+    .editor-field {
+      margin-top: 11px;
+      display: block;
+    }
+
+    .editor-field > span {
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #475467;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .editor-field > span small {
+      color: #98a2b3;
+      font-weight: 700;
+    }
+
+    .editor-field input[type="text"],
+    .editor-field input[type="number"],
+    .editor-field input[type="url"] {
+      width: 100%;
+      min-height: 34px;
+      padding: 0 9px;
+      border: 1px solid #d4dce5;
+      border-radius: 7px;
+      color: #344054;
+      background: white;
+      font-size: 11px;
+    }
+
+    .editor-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .editor-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+
+    .editor-check {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: #475467;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .editor-section-label {
+      margin: 20px 0 2px;
+      padding-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-top: 1px solid #e5eaf0;
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+
+    .band-editor {
+      margin-top: 10px;
+      padding: 13px;
+      border: 1px solid #d5e4f1;
+      border-radius: 11px;
+      background: #f8fbfe;
+    }
+
+    .band-editor-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .band-editor-head b {
+      color: var(--navy);
+      font-size: 11px;
+    }
+
+    .band-editor-head .editor-button {
+      width: auto;
+      min-height: 28px;
+      padding: 4px 9px;
+      font-size: 8px;
+    }
+
+    .band-tools {
+      margin-top: 11px;
+      display: flex;
+      gap: 7px;
+    }
+
+    .band-tools .editor-button {
+      margin-top: 0;
+      min-height: 32px;
+      font-size: 9px;
+    }
+
+    .band-validation {
+      margin-top: 10px;
+      padding: 9px 11px;
+      border-radius: 8px;
+      font-size: 9px;
+      font-weight: 800;
+      line-height: 1.6;
+    }
+
+    .band-validation.ok { color: #08764b; background: #eafaf2; }
+    .band-validation.warn { color: #8a5a00; background: #fff5dd; }
+    .band-validation.error { color: #b42318; background: #fee4e2; }
+
+    .editor-output-preview {
+      margin: 10px 0 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 260px);
+      justify-content: center;
+    }
+
+    .editor-report {
+      margin-bottom: 14px;
+      font-size: 10px;
+    }
+
+    .editor-report p { margin: 4px 0; }
+
+    .editor-code {
+      width: 100%;
+      height: 300px;
+      padding: 11px;
+      border: 1px solid #d4dce5;
+      border-radius: 9px;
+      color: #1f2a37;
+      background: #f7f9fb;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 10px;
+      line-height: 1.5;
+      white-space: pre;
+      overflow: auto;
+      resize: vertical;
+    }
+
+    .editor-output-actions {
+      margin: 10px 0 6px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .editor-output-actions .editor-button { margin-top: 0; }
+
+    .editor-steps {
+      margin: 0 0 12px;
+      padding: 11px 13px 11px 28px;
+      border-radius: 9px;
+      background: var(--soft);
+      color: #475467;
+      font-size: 9px;
+      line-height: 1.7;
+    }
+
+    .copy-done { border-color: #079455 !important; color: #079455 !important; }
+
+    @media (max-width: 1180px) {
+      .editor-main { grid-template-columns: 230px 1fr; }
+      .editor-output-panel { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 760px) {
+      .editor-main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-banner">社内編集用ページ — スタッフHPへはこのファイル（editor.html / editor.js）をアップロードしないでください。公開ページからのリンクもありません。</div>
+
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <img src="https://www.staf.co.jp/dcms_media/image/logo.png" alt="スタッフ株式会社">
+      <span>ANTENNA DATA EDITOR</span>
+    </a>
+    <div class="topbar-actions">
+      <span class="prototype-badge">INTERNAL USE ONLY</span>
+      <a class="text-link" href="index.html">ツール本体を開く ↗</a>
+    </div>
+  </header>
+
+  <main class="editor-main">
+    <aside class="editor-panel">
+      <h2>機種一覧</h2>
+      <p class="panel-sub">現在の antenna-data.js ＋編集中の下書き</p>
+      <ul class="editor-model-list" id="modelList"></ul>
+      <button class="editor-button primary" id="newModelButton" type="button">＋ 新規機種を追加</button>
+      <button class="editor-button ghost" id="discardDraftButton" type="button">下書きを破棄して読み込み直す</button>
+      <ol class="editor-steps" style="margin-top:14px">
+        <li>機種を選ぶ（または新規追加）</li>
+        <li>フォームを入力し「カタログへ反映」</li>
+        <li>右の「antenna-data.js を生成」</li>
+        <li>生成ファイルで antenna-data.js を置き換えてHPへアップロード</li>
+      </ol>
+    </aside>
+
+    <section class="editor-panel">
+      <h2 id="formTitle">機種データ</h2>
+      <p class="panel-sub">寸法・周波数帯は公式仕様（カタログ値）を入力してください</p>
+
+      <div class="editor-grid-2">
+        <label class="editor-field">
+          <span>型番（id）<small>例: 1018-521A</small></span>
+          <input type="text" id="fId">
+        </label>
+        <label class="editor-field">
+          <span>実装方法<small>例: SMTリフロー実装</small></span>
+          <input type="text" id="fMount">
+        </label>
+      </div>
+
+      <label class="editor-field">
+        <span>製品名</span>
+        <input type="text" id="fName">
+      </label>
+
+      <div class="editor-grid-2">
+        <label class="editor-field">
+          <span>英字カテゴリ表記<small>ヒーロー上部に表示</small></span>
+          <input type="text" id="fCategory">
+        </label>
+        <label class="editor-field">
+          <span>アンテナ形式<small>例: λ/4型・無指向性</small></span>
+          <input type="text" id="fForm">
+        </label>
+      </div>
+
+      <label class="editor-field">
+        <span>製品ページURL</span>
+        <input type="url" id="fProductUrl">
+      </label>
+
+      <label class="editor-field">
+        <span>製品画像URL<small>staf.co.jp上の公開画像を推奨</small></span>
+        <input type="url" id="fImage">
+      </label>
+
+      <label class="editor-field">
+        <span>対応帯域の要約表示<small>機種カードに表示。例: 2.4 / 5 / 6 GHz</small></span>
+        <input type="text" id="fBandSummary">
+      </label>
+
+      <div class="editor-grid-3">
+        <label class="editor-field">
+          <span>長さ L (mm)</span>
+          <input type="number" id="fDimL" step="0.1" min="1">
+        </label>
+        <label class="editor-field">
+          <span>幅 W (mm)</span>
+          <input type="number" id="fDimW" step="0.1" min="1">
+        </label>
+        <label class="editor-field">
+          <span>高さ H (mm)</span>
+          <input type="number" id="fDimH" step="0.1" min="0.1">
+        </label>
+      </div>
+
+      <label class="editor-check">
+        <input type="checkbox" id="fCalibrated">
+        概算係数は実測に基づく校正済み（未チェックの機種は画面に「仮係数」表示）
+      </label>
+
+      <div class="editor-section-label">
+        <span>対応周波数帯</span>
+        <button class="editor-button ghost" id="addBandButton" type="button" style="width:auto;min-height:30px;margin:0;font-size:9px">＋ 帯域を追加</button>
+      </div>
+      <div id="bandList"></div>
+
+      <div class="editor-section-label"><span>反映</span></div>
+      <button class="editor-button primary" id="applyButton" type="button">この内容をカタログへ反映（下書き保存）</button>
+      <button class="editor-button danger" id="deleteButton" type="button">この機種をカタログから削除</button>
+    </section>
+
+    <section class="editor-panel editor-output-panel">
+      <h2>プレビューと出力</h2>
+      <p class="panel-sub">機種カードの見え方と、生成される antenna-data.js</p>
+
+      <div class="editor-output-preview model-cards" id="cardPreview"></div>
+      <div class="editor-report" id="reportArea"></div>
+
+      <div class="editor-output-actions">
+        <button class="editor-button primary" id="generateButton" type="button">antenna-data.js を生成</button>
+        <button class="editor-button" id="copyButton" type="button">コードをコピー</button>
+        <button class="editor-button" id="downloadButton" type="button" style="grid-column:1/-1">antenna-data.js をダウンロード</button>
+      </div>
+      <textarea class="editor-code" id="codeOut" spellcheck="false" readonly placeholder="「antenna-data.js を生成」を押すと、ここに置き換え用ファイルの内容が表示されます。"></textarea>
+    </section>
+  </main>
+
+  <script src="antenna-data.js?v=260612-4"></script>
+  <script src="editor.js?v=260612-1"></script>
+</body>
+</html>

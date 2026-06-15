@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="スタッフ株式会社の板金アンテナを基板・GND・配置条件から検討する顧客向けWebプロトタイプ">
+  <title>STAF Antenna Layout Lab | 板金アンテナ使用可否検討ツール</title>
+  <link rel="preconnect" href="https://www.staf.co.jp">
+  <link rel="stylesheet" href="styles.css?v=260615-1">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="https://www.staf.co.jp/" target="_blank" rel="noopener">
+      <img src="https://www.staf.co.jp/dcms_media/image/logo.png" alt="スタッフ株式会社 板金アンテナ">
+      <span>Antenna Layout Lab</span>
+    </a>
+    <div class="topbar-actions">
+      <span class="prototype-badge">RF LAYOUT PROTOTYPE</span>
+      <a class="text-link" id="officialLink" href="https://www.staf.co.jp/product/antenna/1018-521.html" target="_blank" rel="noopener">1018-521A 公式仕様 ↗</a>
+    </div>
+  </header>
+
+  <div class="result-ticker">
+    <button class="ticker-inner" id="resultTicker" type="button" aria-label="VSWR判定の詳細へ移動">
+      <span class="ticker-model" id="tickerModel">1018-521A・2.4GHz帯</span>
+      <span class="ticker-pill" id="tickerPill">帯域内 良好</span>
+      <span class="ticker-item">最小VSWR <b id="tickerMinV">–</b></span>
+      <span class="ticker-item">カバー率 <b id="tickerCov">–</b></span>
+      <span class="ticker-item">共振点 <b id="tickerF0">–</b></span>
+      <span class="ticker-jump">判定の詳細へ ↓</span>
+    </button>
+  </div>
+
+  <main>
+    <section class="product-hero">
+      <div class="hero-copy">
+        <p class="eyebrow" id="heroCategory">MULTI-BAND SMT SHEET-METAL ANTENNA</p>
+        <h1>基板とGNDを変えて、<br>VSWRで判断する。</h1>
+        <p class="hero-lead" id="heroLead">
+          板金アンテナを自社基板で使う際の初期検討ツールです。
+          基板サイズ、外形、GND構成、アンテナ位置を変更し、特性変化を同じ画面で確認できます。
+        </p>
+        <div class="hero-specs" id="heroSpecs"></div>
+      </div>
+      <div class="product-visual">
+        <div class="frequency-ring" aria-hidden="true">
+          <span id="ringValue">2.4</span>
+          <small id="ringUnit">GHz</small>
+        </div>
+        <img id="heroImage" src="https://www.staf.co.jp/dcms_media/image/241111_1018-521A_%E8%83%8C%E6%99%AF%E6%8A%9C%E3%81%8D.png" alt="板金アンテナ製品画像">
+        <div class="product-caption">
+          <span>STAF</span>
+          <strong id="captionModel">1018-521A</strong>
+          <small id="captionForm">λ/4型・無指向性</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="lab-section">
+      <div class="model-select-block">
+        <div class="model-select-heading">
+          <div>
+            <p class="eyebrow">STEP 1 — SELECT ANTENNA</p>
+            <h2>板金アンテナを選ぶ</h2>
+          </div>
+          <p class="model-select-note">機種を切り替えると、対応周波数帯・外形・判定がすべて連動します。</p>
+        </div>
+        <div class="model-cards" id="modelCards"></div>
+      </div>
+
+      <div class="lab-heading">
+        <div>
+          <p class="eyebrow">STEP 2 — INTERACTIVE RF LAYOUT</p>
+          <h2>実装条件を設定</h2>
+        </div>
+        <div class="model-note">
+          <strong>概算モデル</strong>
+          <span>実測・電磁界解析の代替ではありません</span>
+        </div>
+      </div>
+
+      <div class="lab-grid">
+        <aside class="settings-panel">
+          <div class="panel-title">
+            <div>
+              <span>LAYOUT INPUT</span>
+              <h3>基板・GND設定</h3>
+            </div>
+            <button class="reset-button" id="resetButton" type="button">初期値へ</button>
+          </div>
+
+          <div class="settings-cols">
+          <div class="settings-col">
+          <section class="setting-group">
+            <div class="setting-label">
+              <span>評価する周波数帯</span>
+              <small>機種の対応帯域から選択</small>
+            </div>
+            <div class="band-options" id="bandSelect"></div>
+            <p class="band-use" id="bandUse"></p>
+          </section>
+
+          <section class="setting-group">
+            <div class="setting-label">
+              <span>GND構成</span>
+              <small>銅箔領域とアンテナ周辺条件</small>
+            </div>
+
+            <div class="range-pair">
+              <label class="select-field">
+                <span>GNDパターン</span>
+                <select id="gndMode">
+                  <option value="full">全面GND</option>
+                  <option value="partial">部分GND</option>
+                  <option value="split">分割GND</option>
+                </select>
+              </label>
+
+              <div class="gnd-layer-field">
+                <span>GND層</span>
+                <div class="segmented">
+                  <label><input type="radio" name="gndLayer" value="top"><span>TOP</span></label>
+                  <label><input type="radio" name="gndLayer" value="bottom"><span>BOTTOM</span></label>
+                  <label><input type="radio" name="gndLayer" value="both" checked><span>両面</span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="range-pair">
+              <label class="range-field">
+                <span>基板端からGND <span class="num-box"><input id="gndEdgeNum" type="number" min="0" max="10" step="0.5" value="1.0"><i>mm</i></span></span>
+                <input id="gndEdge" type="range" min="0" max="10" step="0.5" value="1">
+                <small class="range-limits">入力範囲 0–10 mm</small>
+              </label>
+
+              <label class="range-field emphasized">
+                <span>アンテナとGND距離 <span class="num-box"><input id="gndGapNum" type="number" min="0" max="15" step="0.5" value="2.0"><i>mm</i></span></span>
+                <input id="gndGap" type="range" min="0" max="15" step="0.5" value="2">
+                <small class="range-limits">入力範囲 0–15 mm</small>
+              </label>
+            </div>
+
+            <div class="fixed-rule">
+              <span class="rule-mark">!</span>
+              <p><b>アンテナ実装領域の直下はGND抜き</b><br>製品本体の実装領域をGNDから除外して表示します。</p>
+            </div>
+          </section>
+          </div>
+
+          <div class="settings-col">
+          <section class="setting-group">
+            <div class="setting-label">
+              <span>基板外形</span>
+              <small>四角形以外も比較できます</small>
+            </div>
+            <div class="shape-options">
+              <label>
+                <input type="radio" name="boardShape" value="rectangle" checked>
+                <span><i class="shape-icon rectangle"></i>四角</span>
+              </label>
+              <label>
+                <input type="radio" name="boardShape" value="chamfer">
+                <span><i class="shape-icon chamfer"></i>角欠け</span>
+              </label>
+              <label>
+                <input type="radio" name="boardShape" value="lshape">
+                <span><i class="shape-icon lshape"></i>L字</span>
+              </label>
+            </div>
+
+            <div class="range-pair">
+              <label class="range-field">
+                <span>基板 横幅 <span class="num-box"><input id="boardWidthNum" type="number" min="20" max="150" step="1" value="50"><i>mm</i></span></span>
+                <input id="boardWidth" type="range" min="20" max="150" step="1" value="50">
+                <small class="range-limits">入力範囲 20–150 mm</small>
+              </label>
+              <label class="range-field">
+                <span>基板 縦幅 <span class="num-box"><input id="boardHeightNum" type="number" min="15" max="100" step="1" value="30"><i>mm</i></span></span>
+                <input id="boardHeight" type="range" min="15" max="100" step="1" value="30">
+                <small class="range-limits">入力範囲 15–100 mm</small>
+              </label>
+            </div>
+          </section>
+
+          <section class="setting-group">
+            <div class="setting-label">
+              <span>実装条件</span>
+              <small>配置は基板上で直接ドラッグ可能</small>
+            </div>
+
+            <div class="antenna-size-card">
+              <div class="size-sketch">
+                <span class="size-length" id="sizeLengthLabel">L 20 mm</span>
+                <i id="sizeSketchBody"></i>
+                <span class="size-width" id="sizeWidthLabel">W 8 mm</span>
+              </div>
+              <div>
+                <span id="antennaCardKicker">1018-521A 固定外形</span>
+                <strong id="antennaCardDims">L20 × W8 × H13.5 mm</strong>
+                <small id="antennaCardNote">基板表示は実寸比率で描画</small>
+              </div>
+            </div>
+
+            <div class="control-row">
+              <span>アンテナ方向</span>
+              <div class="segmented compact">
+                <label><input type="radio" name="orientation" value="0" checked><span>横向き</span></label>
+                <label><input type="radio" name="orientation" value="90"><span>縦向き</span></label>
+              </div>
+            </div>
+
+            <div class="range-pair">
+              <label class="range-field">
+                <span>基板厚 <span class="num-box"><input id="thicknessNum" type="number" min="0.6" max="2.4" step="0.2" value="1.6"><i>mm</i></span></span>
+                <input id="thickness" type="range" min="0.6" max="2.4" step="0.2" value="1.6">
+                <small class="range-limits">入力範囲 0.6–2.4 mm</small>
+              </label>
+
+              <label class="select-field">
+                <span>基材</span>
+                <select id="material">
+                  <option value="fr4">FR-4（εr 4.3）</option>
+                  <option value="lowloss">低損失材（εr 3.5）</option>
+                  <option value="highk">高誘電率材（εr 4.8）</option>
+                </select>
+              </label>
+            </div>
+          </section>
+          </div>
+          </div>
+        </aside>
+
+        <section class="board-panel">
+          <div class="board-panel-header">
+            <div>
+              <span class="panel-kicker">BOARD VIEW</span>
+              <h3>基板レイアウト</h3>
+            </div>
+            <div class="view-legend">
+              <span><i class="legend-gnd"></i>GND</span>
+              <span><i class="legend-keepout"></i>GND抜き＋距離</span>
+              <span><i class="legend-ant"></i>アンテナ</span>
+            </div>
+          </div>
+
+          <div class="pcb-canvas" id="pcbCanvas">
+            <div class="dimension dimension-width">
+              <span id="widthDimension">50 mm</span>
+            </div>
+            <div class="dimension dimension-height">
+              <span id="heightDimension">30 mm</span>
+            </div>
+            <div class="pcb-board shape-rectangle" id="pcbBoard">
+              <div class="pcb-traces" aria-hidden="true"></div>
+              <div class="gnd-plane mode-full" id="gndPlane">
+                <span>GND / BOTH LAYERS</span>
+              </div>
+              <div class="antenna-keepout" id="antennaKeepout">
+                <span id="gapLabel">GND 2.0 mm</span>
+              </div>
+              <button class="sheet-antenna" id="antennaBlock" type="button" aria-label="板金アンテナ。ドラッグして配置を変更できます">
+                <span class="antenna-body" id="antennaBodyLabel">1018-521A</span>
+                <i class="feed-pin"></i>
+                <small>DRAG</small>
+                <span class="antenna-dimension dimension-l" id="antennaLengthLabel">L 20 mm</span>
+                <span class="antenna-dimension dimension-w" id="antennaWidthLabel">W 8 mm</span>
+                <span class="antenna-height-label" id="antennaHeightLabel">H 13.5 mm</span>
+              </button>
+              <span class="board-origin">PCB</span>
+              <span class="board-shape-label" id="boardShapeLabel">RECTANGLE</span>
+            </div>
+          </div>
+
+          <div class="position-readout">
+            <div>
+              <span>左端から</span>
+              <strong id="positionX">2.5 mm</strong>
+            </div>
+            <div>
+              <span>上端から</span>
+              <strong id="positionY">2.0 mm</strong>
+            </div>
+            <div>
+              <span>最寄り基板端</span>
+              <strong id="nearestEdge">2.0 mm</strong>
+            </div>
+            <p>アンテナをドラッグ、または基板上をクリックして配置してください。</p>
+          </div>
+        </section>
+
+        <section class="vswr-panel">
+          <div class="vswr-header">
+            <div>
+              <p class="eyebrow" id="chartRangeEyebrow">2.30–2.50 GHZ ESTIMATE</p>
+              <h2>VSWR判定</h2>
+            </div>
+            <span class="status-pill" id="riskPill">良好</span>
+          </div>
+
+          <div class="customer-verdict good" id="customerVerdict">
+            <span class="verdict-icon" id="verdictIcon">OK</span>
+            <div>
+              <span class="verdict-label">この基板条件での判断</span>
+              <strong id="verdictTitle">採用検討を進められます</strong>
+              <p id="verdictSummary">帯域全体でVSWR 2.0以下となる見込みです。</p>
+            </div>
+          </div>
+
+          <div class="decision-scale" aria-label="VSWRの判断目安">
+            <div class="ideal"><strong>1.0–1.5</strong><span>余裕あり</span></div>
+            <div class="pass"><strong>1.5–2.0</strong><span>使用目安</span></div>
+            <div class="adjust"><strong>2.0–3.0</strong><span>要調整</span></div>
+            <div class="poor"><strong>3.0以上</strong><span>見直し</span></div>
+          </div>
+
+          <div class="vswr-hero-metric">
+            <div>
+              <span>最小VSWR</span>
+              <strong id="minVswr">1.28</strong>
+            </div>
+            <div class="resonance">
+              <span>共振点</span>
+              <strong id="resonanceFrequency">2.442 GHz</strong>
+            </div>
+            <div class="reflected">
+              <span>共振点での反射電力</span>
+              <strong id="reflectedPower">1.5%</strong>
+            </div>
+            <div class="baseline-delta">
+              <span>基準条件との差</span>
+              <strong id="baselineDelta">+0.04</strong>
+            </div>
+          </div>
+
+          <div class="chart-block">
+          <div class="chart-key">
+            <span><i class="current-curve"></i>現在の設定</span>
+            <label><input id="showBaseline" type="checkbox" checked>基準カーブを表示</label>
+            <span><i class="limit-line"></i>判定線 VSWR 2.0</span>
+          </div>
+
+          <svg class="vswr-chart" id="vswrChart" viewBox="0 0 700 390" role="img" aria-label="選択した周波数帯のVSWR概算グラフ">
+            <defs>
+              <linearGradient id="vswrFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1268ff" stop-opacity=".24"/>
+                <stop offset="100%" stop-color="#1268ff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <rect class="fail-zone" x="72" y="36" width="586" height="234"></rect>
+            <rect class="pass-zone" x="72" y="270" width="586" height="72"></rect>
+            <rect class="wifi-band-zone" id="wifiBandZone" x="365" y="36" width="244" height="306"></rect>
+            <g class="chart-grid" id="chartGrid"></g>
+            <line class="threshold-line" x1="72" y1="270" x2="658" y2="270"></line>
+            <text class="threshold-label" x="650" y="260" text-anchor="end">VSWR 2.0</text>
+            <text class="zone-label fail-label" x="84" y="58">要調整エリア</text>
+            <text class="zone-label pass-label" x="84" y="327">使用目安エリア</text>
+            <line id="resonanceLine" class="resonance-line" x1="0" y1="36" x2="0" y2="342"></line>
+            <text id="resonanceChartLabel" class="resonance-chart-label" x="0" y="52">共振点</text>
+            <path id="baselinePath" class="baseline-path"></path>
+            <path id="vswrArea" class="vswr-area"></path>
+            <path id="vswrPath" class="vswr-path"></path>
+            <g id="chartPoints"></g>
+            <g id="chartPointLabels"></g>
+            <g id="axisLabels"></g>
+          </svg>
+          </div>
+
+          <div class="band-coverage-visual">
+            <div class="band-coverage-heading">
+              <div>
+                <span id="bandRangeKicker">利用帯域</span>
+                <strong id="bandRangeText">2.400–2.4835 GHz</strong>
+              </div>
+              <div class="coverage-score">
+                <span>カバー率</span>
+                <strong id="bandCoverage">100%</strong>
+              </div>
+            </div>
+            <div class="band-segments" id="bandSegments" aria-label="周波数別VSWR判定"></div>
+            <div class="band-axis">
+              <span id="bandAxisStart">2.400</span>
+              <span id="bandAxisMid">2.442</span>
+              <span id="bandAxisEnd">2.4835 GHz</span>
+            </div>
+          </div>
+
+          <div class="frequency-cards">
+            <article id="cardF0">
+              <div class="frequency-card-heading">
+                <span id="freqLabelF0">帯域下端・2.400 GHz</span>
+                <b id="judgmentF0">OK</b>
+              </div>
+              <strong id="vswrF0">1.55</strong>
+              <small id="reflectionF0">反射電力 4.7%</small>
+            </article>
+            <article class="primary" id="cardF1">
+              <div class="frequency-card-heading">
+                <span id="freqLabelF1">中央付近・2.450 GHz</span>
+                <b id="judgmentF1">OK</b>
+              </div>
+              <strong id="vswrF1">1.32</strong>
+              <small id="reflectionF1">反射電力 1.8%</small>
+            </article>
+            <article id="cardF2">
+              <div class="frequency-card-heading">
+                <span id="freqLabelF2">帯域上端・2.4835 GHz</span>
+                <b id="judgmentF2">OK</b>
+              </div>
+              <strong id="vswrF2">1.70</strong>
+              <small id="reflectionF2">反射電力 6.7%</small>
+            </article>
+          </div>
+
+          <div class="bandwidth-row">
+            <div>
+              <span>VSWR 2.0以下の範囲</span>
+              <strong id="passBandwidth">2.392–2.492 GHz</strong>
+            </div>
+            <div>
+              <span id="coverageBandName">帯域カバー率</span>
+              <strong id="coverageStatement">全帯域をカバー</strong>
+            </div>
+          </div>
+
+          <div class="rf-diagnosis">
+            <span class="diagnosis-icon">RF</span>
+            <div>
+              <strong id="diagnosisTitle">選択帯域をカバーできる見込みです</strong>
+              <p id="diagnosisText">アンテナが基板端にあり、GND距離も基準値に近いため、初期配置として良好です。</p>
+            </div>
+          </div>
+
+          <div class="improvement-panel">
+            <div>
+              <span class="improvement-kicker">改善するときは</span>
+              <strong>この順番で条件を見直してください</strong>
+            </div>
+            <ol id="improvementList">
+              <li>アンテナを基板端へ移動</li>
+              <li>GNDを全面・両面へ変更</li>
+              <li>アンテナとGNDの距離を2mm前後へ調整</li>
+            </ol>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="technical-section">
+      <div class="technical-copy">
+        <p class="eyebrow">WHAT THE CUSTOMER CAN JUDGE</p>
+        <h2>購入前に見えること</h2>
+        <p>製品ページ上で「自分の基板条件なら使えそうか」を確認し、具体的な条件を添えて問い合わせできます。</p>
+        <a class="technical-cta" href="https://www.staf.co.jp/contact.html" target="_blank" rel="noopener">この基板条件で問い合わせる →</a>
+      </div>
+      <div class="technical-grid">
+        <article>
+          <span>01</span>
+          <h3>帯域内のVSWR</h3>
+          <p>帯域下端・中央・上端の3周波数の値とVSWR 2.0以下の範囲を一目で確認。</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>GND条件の影響</h3>
+          <p>全面・部分・分割GND、基板端余白、アンテナとの距離による変化を比較。</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>機種と帯域の比較</h3>
+          <p>板金アンテナのラインナップを切り替え、対応帯域ごとの配置リスクを視覚的に把握。</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <nav class="footer-nav" aria-label="スタッフ株式会社の関連ページ">
+      <div class="footer-col footer-brand-col">
+        <a class="footer-logo" href="https://www.staf.co.jp/" target="_blank" rel="noopener">
+          <img src="https://www.staf.co.jp/dcms_media/image/logo.png" alt="スタッフ株式会社 トップページ">
+        </a>
+        <p class="footer-tagline">板金アンテナの設計・製造 — スタッフ株式会社</p>
+        <a class="footer-cta" href="https://www.staf.co.jp/contact.html" target="_blank" rel="noopener">板金アンテナの技術相談・お問い合わせ →</a>
+      </div>
+
+      <div class="footer-col">
+        <span class="footer-heading">板金アンテナ 製品ページ</span>
+        <ul class="footer-links">
+          <li><a href="https://www.staf.co.jp/product/antenna/1018-521.html" target="_blank" rel="noopener">1018-521A｜SMT対応 省スペース板金アンテナ（マルチバンド）</a></li>
+          <li><a href="https://www.staf.co.jp/product/antenna/1019-107A.html" target="_blank" rel="noopener">1019-107A｜Wi-Fi 7 / BLE対応 トライバンドSMD板金アンテナ</a></li>
+          <li><a href="https://www.staf.co.jp/product/antenna/1018-456.html" target="_blank" rel="noopener">1018-456A｜挿入実装対応 板金アンテナ</a></li>
+          <li><a href="https://www.staf.co.jp/product/antenna/" target="_blank" rel="noopener">板金アンテナ 製品一覧をすべて見る</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <span class="footer-heading">スタッフ株式会社</span>
+        <ul class="footer-links">
+          <li><a href="https://www.staf.co.jp/" target="_blank" rel="noopener">トップページ（会社・製品情報）</a></li>
+          <li><a href="https://www.staf.co.jp/product/antenna/" target="_blank" rel="noopener">アンテナ製品情報</a></li>
+          <li><a href="https://www.staf.co.jp/contact.html" target="_blank" rel="noopener">お問い合わせ</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="footer-base">
+      <p>STAF Antenna Layout Lab | 板金アンテナ顧客向け検討プロトタイプ</p>
+      <p>表示値はUI検証用の概算です。最終判断には実機評価・整合調整が必要です。</p>
+    </div>
+  </footer>
+
+  <script src="antenna-data.js?v=260612-14"></script>
+  <script src="app.js?v=260612-14"></script>
+</body>
+</html>
