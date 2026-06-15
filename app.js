@@ -24,6 +24,11 @@ const REF_GAP = 2.2;
 const REF_THICKNESS = 1.6;
 const BASE_F0 = 2442; // 係数スケーリングの基準周波数（521A 2.4GHz帯）
 
+// 板金アンテナは「基板端＋GNDクリアランス」への実装が設計前提。
+// 最寄り基板端からの距離がこの値(mm)を超える配置は基板内側＝設計対象外とし、
+// VSWR等を表示せずNG判定にする。
+const EDGE_LIMIT_MM = 5;
+
 const state = {
   antennaIndex: 0,
   bandIndex: 0,
@@ -119,6 +124,8 @@ const el = {
   wifiBandZone: document.querySelector("#wifiBandZone"),
   resonanceLine: document.querySelector("#resonanceLine"),
   resonanceChartLabel: document.querySelector("#resonanceChartLabel"),
+  vswrChart: document.querySelector("#vswrChart"),
+  chartMessage: document.querySelector("#chartMessage"),
   showBaseline: document.querySelector("#showBaseline"),
   cards: [
     {
@@ -701,9 +708,105 @@ function renderImprovements(result, input, values) {
   });
 }
 
+// 設計対象外（基板内側）配置でのグラフ表示の切り替え。
+// VSWRカーブ・基準カーブ・共振点を隠し、対象外メッセージを表示する。
+// out-of-designクラスはリサイズで上書きされない pcb-canvas 側へ付与する。
+function setDesignState(outOfDesign) {
+  el.pcbCanvas.classList.toggle("out-of-design", outOfDesign);
+  el.nearestEdge.classList.toggle("value-risk", outOfDesign);
+  el.vswrChart.classList.toggle("chart-disabled", outOfDesign);
+  if (el.chartMessage) el.chartMessage.style.display = outOfDesign ? "" : "none";
+
+  const display = outOfDesign ? "none" : "";
+  el.vswrPath.style.display = display;
+  el.vswrArea.style.display = display;
+  el.resonanceLine.style.display = display;
+  el.resonanceChartLabel.style.display = display;
+  if (outOfDesign) {
+    el.baselinePath.style.display = "none";
+    el.chartPoints.replaceChildren();
+    el.chartPointLabels.replaceChildren();
+  }
+}
+
+// 基板内側＝設計対象外。VSWR等を一切出さず「設計対象外（NG）」を明示する。
+function renderOutOfDesign(input, placement, band) {
+  // ヒーロー指標はすべて非表示（ダッシュ）
+  el.minVswr.textContent = "—";
+  el.resonanceFrequency.textContent = "—";
+  el.reflectedPower.textContent = "—";
+  el.baselineDelta.textContent = "—";
+  el.baselineDelta.className = "";
+
+  // 3周波数カードは判定対象外
+  el.cards.forEach(slot => {
+    slot.card.classList.remove("ideal", "pass", "adjust", "poor");
+    slot.card.classList.add("out-of-design");
+    slot.judgment.textContent = "対象外";
+    slot.vswr.textContent = "—";
+    slot.reflection.textContent = "設計対象外の配置";
+  });
+
+  // 帯域カバー率・通過帯域も対象外
+  el.passBandwidth.textContent = "—";
+  el.bandCoverage.textContent = "—";
+  el.bandCoverage.className = "coverage-risk";
+  el.coverageStatement.textContent = "判定対象外";
+  el.bandSegments.replaceChildren();
+  for (let index = 0; index < 17; index += 1) {
+    const segment = document.createElement("span");
+    segment.className = "disabled";
+    el.bandSegments.append(segment);
+  }
+
+  // 顧客向け判定：NG
+  el.riskPill.className = "status-pill risk";
+  el.riskPill.textContent = "設計対象外";
+  el.customerVerdict.className = "customer-verdict risk";
+  el.verdictIcon.textContent = "NG";
+  el.verdictTitle.textContent = "この配置は設計対象外です（基板の内側）";
+  el.verdictSummary.textContent = `板金アンテナは基板端への実装が前提です。最寄り基板端から${placement.nearest.toFixed(1)}mm内側にあり、GNDに囲まれて放射特性が得られないため、VSWRは判定しません。`;
+
+  // 診断
+  el.diagnosisTitle.textContent = "アンテナが基板の内側に配置されています";
+  el.diagnosisText.textContent = `板金アンテナは「基板端＋アンテナ周辺のGND抜き（クリアランス）」を前提に設計されています。内側配置ではGNDに囲まれて強く離調し、放射効率が大きく低下するため、設計対象外です。アンテナを基板端（最寄り端から${EDGE_LIMIT_MM}mm以内）へ移動してください。`;
+
+  // 改善ガイド
+  el.improvementList.replaceChildren();
+  [
+    `アンテナを基板端へ移動する（現在 最寄り端から ${placement.nearest.toFixed(1)}mm）`,
+    "アンテナ周辺のGND抜き（クリアランス）を確保する",
+    "基板端へ再配置したうえでVSWR・放射効率を評価基板で実測する"
+  ].forEach(text => {
+    const item = document.createElement("li");
+    item.textContent = text;
+    el.improvementList.append(item);
+  });
+
+  // 上部ティッカー
+  if (ticker.bar) {
+    ticker.model.textContent = `${activeAntenna().id}・${band.label}`;
+    ticker.pill.className = "ticker-pill risk";
+    ticker.pill.textContent = "設計対象外";
+    ticker.minV.textContent = "—";
+    ticker.coverage.textContent = "—";
+    ticker.f0.textContent = "—";
+  }
+}
+
 function updateVswr() {
   const band = activeBand();
   const input = getInputs();
+
+  // 基板内側（設計対象外）の配置はVSWR等を表示せずNG判定にする
+  const placement = placementInfo(input);
+  const outOfDesign = placement.nearest > EDGE_LIMIT_MM;
+  setDesignState(outOfDesign);
+  if (outOfDesign) {
+    renderOutOfDesign(input, placement, band);
+    return;
+  }
+
   const result = model(input);
   const path = buildPath(result.valueAt);
   const baseline = buildPath(referenceModel().valueAt);

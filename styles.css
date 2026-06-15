@@ -3694,3 +3694,62 @@ input[type="range"] {
 .frequency-ring small {
   display: none;
 }
+
+/* ============================================================
+   設計対象外（基板内側）配置のNG表示
+   ============================================================ */
+
+/* グラフ：VSWRカーブを隠し（JS）、背景ゾーン・グリッドを減光 */
+.vswr-chart.chart-disabled .fail-zone,
+.vswr-chart.chart-disabled .pass-zone,
+.vswr-chart.chart-disabled .wifi-band-zone,
+.vswr-chart.chart-disabled .chart-grid,
+.vswr-chart.chart-disabled .threshold-line,
+.vswr-chart.chart-disabled .threshold-label,
+.vswr-chart.chart-disabled .zone-label {
+  opacity: .2;
+}
+
+.chart-message {
+  fill: #b42318;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.chart-message tspan:last-child {
+  fill: #7d3b36;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* アンテナ本体：NG配置を赤枠で明示（リサイズで消えないよう canvas 側に付与） */
+.pcb-canvas.out-of-design .sheet-antenna {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(221, 44, 44, .18);
+}
+
+/* 最寄り端の数値を赤く強調 */
+.position-readout strong.value-risk {
+  color: var(--red);
+}
+
+/* 3周波数カード：判定対象外（中立グレー） */
+.frequency-cards article.out-of-design {
+  border-color: #d8e0e9;
+  background: #f4f6f9;
+}
+
+.frequency-cards article.out-of-design > strong {
+  color: #98a2b3;
+}
+
+.frequency-cards article.out-of-design b {
+  background: #98a2b3;
+}
+
+/* 帯域セグメント：対象外（中立グレー） */
+.band-segments span.disabled {
+  background: #d8e0e9;
+  opacity: .55;
+}

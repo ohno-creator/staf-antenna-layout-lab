@@ -6,7 +6,7 @@
   <meta name="description" content="スタッフ株式会社の板金アンテナを基板・GND・配置条件から検討する顧客向けWebプロトタイプ">
   <title>STAF Antenna Layout Lab | 板金アンテナ使用可否検討ツール</title>
   <link rel="preconnect" href="https://www.staf.co.jp">
-  <link rel="stylesheet" href="styles.css?v=260615-2">
+  <link rel="stylesheet" href="styles.css?v=260615-3">
 </head>
 <body>
   <header class="topbar">
@@ -362,6 +362,10 @@
             <g id="chartPoints"></g>
             <g id="chartPointLabels"></g>
             <g id="axisLabels"></g>
+            <text id="chartMessage" class="chart-message" x="365" y="176" text-anchor="middle" style="display:none">
+              <tspan x="365" dy="0">設計対象外の配置です</tspan>
+              <tspan x="365" dy="30">アンテナを基板端へ移動してください</tspan>
+            </text>
           </svg>
           </div>
 
@@ -508,7 +512,7 @@
     </div>
   </footer>
 
-  <script src="antenna-data.js?v=260612-14"></script>
-  <script src="app.js?v=260612-14"></script>
+  <script src="antenna-data.js?v=260615-3"></script>
+  <script src="app.js?v=260615-3"></script>
 </body>
 </html>
