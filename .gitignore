@@ -3,3 +3,8 @@
 
 # Local editor / Claude Code tooling
 .claude/
+
+# Excel 作業ファイル（社内用・公開リポジトリには含めない）
+*.xlsm
+*.xlsx
+*.xls

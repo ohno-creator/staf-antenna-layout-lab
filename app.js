@@ -24,10 +24,11 @@ const REF_GAP = 2.2;
 const REF_THICKNESS = 1.6;
 const BASE_F0 = 2442; // 係数スケーリングの基準周波数（521A 2.4GHz帯）
 
-// 板金アンテナは「基板端＋GNDクリアランス」への実装が設計前提。
-// 最寄り基板端からの距離がこの値(mm)を超える配置は基板内側＝設計対象外とし、
-// VSWR等を表示せずNG判定にする。
-const EDGE_LIMIT_MM = 5;
+// 板金アンテナはGND-freeなクリアランスへの実装が設計前提。
+// アンテナ周辺のGND抜き(gndGap)が基板端のGND抜きマージン(gndEdge)に届かず、
+// 間にGNDが残る＝アンテナがGNDの内側にある配置は設計対象外(NG)とする。
+//   判定: 最寄り基板端までの距離(nearest) > gndEdge + gndGap + 許容
+const EDGE_TOLERANCE_MM = 0.5; // 配置スナップ等の数値許容
 
 const state = {
   antennaIndex: 0,
@@ -764,19 +765,19 @@ function renderOutOfDesign(input, placement, band) {
   el.riskPill.textContent = "設計対象外";
   el.customerVerdict.className = "customer-verdict risk";
   el.verdictIcon.textContent = "NG";
-  el.verdictTitle.textContent = "この配置は設計対象外です（基板の内側）";
-  el.verdictSummary.textContent = `板金アンテナは基板端への実装が前提です。最寄り基板端から${placement.nearest.toFixed(1)}mm内側にあり、GNDに囲まれて放射特性が得られないため、VSWRは判定しません。`;
+  el.verdictTitle.textContent = "この配置は設計対象外です（アンテナがGNDの内側）";
+  el.verdictSummary.textContent = `アンテナと基板端の間にGNDが残り、アンテナがGND面の内側にあります。板金アンテナは基板端のGND抜き領域（クリアランス）への実装が前提で、GNDに囲まれた状態では放射特性が得られないため、VSWRは判定しません。`;
 
   // 診断
-  el.diagnosisTitle.textContent = "アンテナが基板の内側に配置されています";
-  el.diagnosisText.textContent = `板金アンテナは「基板端＋アンテナ周辺のGND抜き（クリアランス）」を前提に設計されています。内側配置ではGNDに囲まれて強く離調し、放射効率が大きく低下するため、設計対象外です。アンテナを基板端（最寄り端から${EDGE_LIMIT_MM}mm以内）へ移動してください。`;
+  el.diagnosisTitle.textContent = "アンテナがGNDの内側に配置されています";
+  el.diagnosisText.textContent = `板金アンテナは「基板端のGND抜きマージン＋アンテナ周辺のGND抜き（クリアランス）」が連続する位置への実装を前提に設計されています。現在はアンテナと基板端の間にGNDが残っており、GNDに囲まれて強く離調し放射効率が大きく低下するため、設計対象外です。アンテナを基板端側へ動かし、周辺のGND抜きが基板端のGND抜き領域につながる位置へ配置してください。`;
 
   // 改善ガイド
   el.improvementList.replaceChildren();
   [
-    `アンテナを基板端へ移動する（現在 最寄り端から ${placement.nearest.toFixed(1)}mm）`,
-    "アンテナ周辺のGND抜き（クリアランス）を確保する",
-    "基板端へ再配置したうえでVSWR・放射効率を評価基板で実測する"
+    `アンテナを基板端側へ移動してGNDの内側から出す（現在 最寄り端から ${placement.nearest.toFixed(1)}mm）`,
+    `基板端のGND抜き（現在 ${input.gndEdge.toFixed(1)}mm）やアンテナ周辺クリアランス（現在 ${input.gndGap.toFixed(1)}mm）を広げ、GND-free領域を基板端までつなげる`,
+    "再配置後にVSWR・放射効率を評価基板で実測する"
   ].forEach(text => {
     const item = document.createElement("li");
     item.textContent = text;
@@ -798,9 +799,11 @@ function updateVswr() {
   const band = activeBand();
   const input = getInputs();
 
-  // 基板内側（設計対象外）の配置はVSWR等を表示せずNG判定にする
+  // アンテナがGNDの内側にある配置（アンテナ周辺のGND抜きが基板端のGND抜き
+  // マージンに届かず、間にGNDが残る）はVSWR等を表示せずNG判定にする
   const placement = placementInfo(input);
-  const outOfDesign = placement.nearest > EDGE_LIMIT_MM;
+  const clearanceReach = input.gndEdge + input.gndGap + EDGE_TOLERANCE_MM;
+  const outOfDesign = placement.nearest > clearanceReach;
   setDesignState(outOfDesign);
   if (outOfDesign) {
     renderOutOfDesign(input, placement, band);
