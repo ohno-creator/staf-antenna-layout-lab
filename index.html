@@ -6,7 +6,7 @@
   <meta name="description" content="スタッフ株式会社の板金アンテナを基板・GND・配置条件から検討する顧客向けWebプロトタイプ">
   <title>STAF Antenna Layout Lab | 板金アンテナ使用可否検討ツール</title>
   <link rel="preconnect" href="https://www.staf.co.jp">
-  <link rel="stylesheet" href="styles.css?v=260615-4">
+  <link rel="stylesheet" href="styles.css?v=260615-5">
 </head>
 <body>
   <header class="topbar">
@@ -57,6 +57,23 @@
     </section>
 
     <section class="lab-section">
+      <div class="guide-block">
+        <div class="model-select-heading">
+          <div>
+            <p class="eyebrow">STEP 0 — SELECTION GUIDE</p>
+            <h2>どの板金アンテナを選ぶ？</h2>
+          </div>
+          <p class="model-select-note">周波数帯 → 実装方法 → サイズの3ステップで選定。カードを押すと、その機種で検討を始められます。</p>
+        </div>
+        <ol class="guide-steps">
+          <li><span>STEP 1</span><strong>必要な周波数帯</strong><small>5/6GHz・2.4GHz・サブGHz・GNSS のどれか</small></li>
+          <li><span>STEP 2</span><strong>実装方法</strong><small>SMTリフロー / 挿入実装（スルーホール）</small></li>
+          <li><span>STEP 3</span><strong>サイズ・高さ</strong><small>実装スペースと部品高さの制約</small></li>
+        </ol>
+        <div class="guide-cards" id="guideCards"></div>
+        <p class="guide-tiebreak">同じ帯域で迷うとき → 最小なら <b>1019-107A</b> ／ 低背なら <b>1019-107A・1018-456A</b> ／ 高さに余裕があり広帯域なら <b>1018-521A</b></p>
+      </div>
+
       <div class="model-select-block">
         <div class="model-select-heading">
           <div>
@@ -512,7 +529,7 @@
     </div>
   </footer>
 
-  <script src="antenna-data.js?v=260615-4"></script>
-  <script src="app.js?v=260615-4"></script>
+  <script src="antenna-data.js?v=260615-5"></script>
+  <script src="app.js?v=260615-5"></script>
 </body>
 </html>

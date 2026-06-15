@@ -56,6 +56,7 @@ const el = {
   captionModel: document.querySelector("#captionModel"),
   captionForm: document.querySelector("#captionForm"),
   modelCards: document.querySelector("#modelCards"),
+  guideCards: document.querySelector("#guideCards"),
   bandSelect: document.querySelector("#bandSelect"),
   bandUse: document.querySelector("#bandUse"),
   boardWidth: document.querySelector("#boardWidth"),
@@ -314,6 +315,34 @@ function referenceModel() {
 // 機種・帯域セレクタ
 // ------------------------------------------------------------------
 
+// 機種選定ガイド（フローチャート）。カードを押すとその機種を選択し検討へ移動。
+function renderFlowchart() {
+  if (!el.guideCards) return;
+  el.guideCards.replaceChildren();
+  ANTENNA_CATALOG.forEach((antenna, index) => {
+    const g = antenna.guide || {};
+    const d = antenna.dims;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "guide-card";
+    card.dataset.antennaId = antenna.id;
+    card.classList.toggle("selected", index === state.antennaIndex);
+    card.innerHTML = `
+      <span class="guide-card-pick">${g.pick || antenna.bandSummary}</span>
+      <span class="guide-card-visual"><img src="${antenna.image}" alt="${antenna.id}" loading="lazy"></span>
+      <span class="guide-card-id">${antenna.id}</span>
+      <span class="guide-card-freq">${g.freq || antenna.bandSummary}</span>
+      <span class="guide-card-spec"><i>実装</i>${g.mount || antenna.mount}</span>
+      <span class="guide-card-spec"><i>サイズ</i>L${d.length}×W${d.width}×H${d.height}mm（${g.sizeClass || ""}）</span>
+      <span class="guide-card-cta">この機種で検討する →</span>`;
+    card.addEventListener("click", () => {
+      selectAntenna(index);
+      document.querySelector(".model-select-block")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    el.guideCards.append(card);
+  });
+}
+
 function renderModelCards() {
   el.modelCards.replaceChildren();
   ANTENNA_CATALOG.forEach((antenna, index) => {
@@ -359,6 +388,7 @@ function selectAntenna(index) {
   state.bandIndex = 0;
   state.placement = { x: 3, y: 5 };
   renderModelCards();
+  renderFlowchart();
   renderBandSelect();
   applyModelToUI();
   renderAxes();
@@ -1043,6 +1073,7 @@ ticker.bar?.addEventListener("click", () => {
 });
 
 renderModelCards();
+renderFlowchart();
 renderBandSelect();
 applyModelToUI();
 renderAxes();

@@ -22,6 +22,7 @@ const ANTENNA_CATALOG = [
     form: "λ/4型・無指向性",
     mount: "SMTリフロー実装",
     bandSummary: "814–960 MHz / 1.71–2.69 GHz（2.4GHz帯含む）",
+    guide: { pick: "サブGHz〜2.7GHzをSMTで使う", freq: "0.8–0.9G / 1.7–2.7G（2.4G含む）", mount: "SMTリフロー実装", sizeClass: "標準・背が高い" },
     dims: { length: 20, width: 8, height: 13.5 },
     calibrated: true,
     bands: [
@@ -78,6 +79,7 @@ const ANTENNA_CATALOG = [
     form: "λ/4モノポール・無指向性",
     mount: "SMTリフロー実装",
     bandSummary: "2.4 / 5 / 6 GHz（Wi-Fi 7・BLE）",
+    guide: { pick: "5GHz / 6GHz（Wi-Fi 6E/7）が必要", freq: "2.4 / 5 / 6 GHz", mount: "SMTリフロー実装", sizeClass: "超小型・低背" },
     heroWidth: 140,
     dims: { length: 6.6, width: 8, height: 3.7 },
     calibrated: false,
@@ -135,6 +137,7 @@ const ANTENNA_CATALOG = [
     form: "λ/4モノポール・無指向性",
     mount: "挿入実装（溶融はんだ）",
     bandSummary: "814–960 MHz / 1.575–2.17 GHz",
+    guide: { pick: "GNSS / 挿入実装で使う", freq: "0.8–0.9G / 1.575–2.17G", mount: "挿入実装（スルーホール）", sizeClass: "長尺・低背" },
     dims: { length: 45, width: 8, height: 5 },
     calibrated: false,
     bands: [
